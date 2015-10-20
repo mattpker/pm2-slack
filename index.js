@@ -5,19 +5,26 @@ var pm2 = require('pm2');
 var pmx = require('pmx');
 var request = require('request');
 
+// Get the configuration from PM2
 var conf = pmx.initModule();
 
+// Set the events that will trigger the color red
 var redEvents = ['stop', 'exit', 'delete', 'error', 'kill', 'exception', 'restart overlimit'];
 
+// Function to send event to Slack's Incoming Webhook
 function sendSlack(name, event, description) {
 
+    // If a Slack URL is not set, we do not want to continue and nofify the user that it needs to be set
     if (!conf.slack_url) return console.error("There is no Slack URL set, please set the Slack URL: 'pm2 set pm2-slack:slack_url https://slack_url'");
 
+    // The default color for events should be green
     var color = '#008E00';
+    // If the event is listed in redEvents, set the color to red
     if (redEvents.indexOf(event) > -1) {
         color = '#D00000';
     }
 
+    // The JSON payload to send to the Webhook
     var payload = {
         username: os.hostname(),
         attachments: [{
@@ -31,6 +38,7 @@ function sendSlack(name, event, description) {
         }]
     };
 
+    // Options for the post request
     var options = {
         method: 'post',
         body: payload,
@@ -38,6 +46,7 @@ function sendSlack(name, event, description) {
         url: conf.slack_url
     };
 
+    // Funally, make the post request to the Slack Incoming Webhook
     request(options, function(err, res, body) {
         if (err) return console.error(err);
         if (body !== 'ok') {
@@ -46,9 +55,10 @@ function sendSlack(name, event, description) {
     });
 }
 
-
+// Start listening on the PM2 BUS
 pm2.launchBus(function(err, bus) {
 
+    // Listen for process logs
     if (conf.log) {
         bus.on('log:out', function(data) {
             if (data.process.name !== 'pm2-slack') {
@@ -57,6 +67,7 @@ pm2.launchBus(function(err, bus) {
         });
     }
 
+    // Listen for process errors
     if (conf.error) {
         bus.on('log:err', function(data) {
             if (data.process.name !== 'pm2-slack') {
@@ -65,12 +76,14 @@ pm2.launchBus(function(err, bus) {
         });
     }
 
+    // Listen for PM2 kill
     if (conf.kill) {
         bus.on('pm2:kill', function(data) {
             sendSlack('PM2', 'kill', data.msg);
         });
     }
 
+    // Listen for process exceptions
     if (conf.exception) {
         bus.on('process:exception', function(data) {
             if (data.process.name !== 'pm2-slack') {
@@ -79,6 +92,7 @@ pm2.launchBus(function(err, bus) {
         });
     }
 
+    // Listen for PM2 events
     bus.on('process:event', function(data) {
         if (conf[data.event]) {
             if (data.process.name !== 'pm2-slack') {
