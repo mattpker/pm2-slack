@@ -1,0 +1,47 @@
+{
+  "name": "pm2-slack",
+  "version": "0.0.1",
+  "description": "A PM2 module to emit events to Slack",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattpker/pm2-slack"
+  },
+  "keywords": [
+    "pm2",
+    "slack"
+  ],
+  "author": "Matt Atkinson <mattpker@gmail.com> (https://github.com/mattpker)",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/mattpker/pm2-slack/blob/master/LICENSE"
+    }
+  ],
+  "bugs": {
+    "url": "https://github.com/mattpker/pm2-slack/issues"
+  },
+  "homepage": "https://github.com/mattpker/pm2-slack",
+  "dependencies": {
+    "pm2": "^0.15.7",
+    "pmx": "^0.5.5",
+    "request": "^2.65.0"
+  },
+  "config": {
+    "slack_url": null,
+    "log": false,
+    "error": true,
+    "kill": true,
+    "exception": true,
+    "restart": false,
+    "delete": false,
+    "stop": false,
+    "restart overlimit": true,
+    "exit": false,
+    "start": false,
+    "online": false
+  }
+}
