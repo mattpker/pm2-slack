@@ -26,9 +26,9 @@
   },
   "homepage": "https://github.com/mattpker/pm2-slack",
   "dependencies": {
-    "pm2": "^0.15.7",
+    "pm2": "^0.15.10",
     "pmx": "^0.5.5",
-    "request": "^2.65.0"
+    "request": "^2.67.0"
   },
   "config": {
     "slack_url": null,
