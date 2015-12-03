@@ -42,5 +42,6 @@ In lieu of a formal styleguide, take care to maintain the existing coding style.
 
 ## Release History
 
+- 0.2.0 Implemented a rate limiting system and updated all the dependencies
 - 0.1.1 Commenting & Clean up
 - 0.1.0 Initial Release
