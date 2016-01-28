@@ -8,6 +8,13 @@ var request = require('request');
 // Get the configuration from PM2
 var conf = pmx.initModule();
 
+// initialize buffer and queue_max opts
+// buffer seconds can be between 1 and 5
+conf.buffer_seconds = (conf.buffer_seconds > 0 && conf.buffer_seconds < 5) ? conf.buffer_seconds : 1;
+
+// queue max can be between 10 and 100
+conf.queue_max = (conf.queue_max > 10 && conf.queue_max <= 100) ? conf.queue_max : 100;
+
 // Set the events that will trigger the color red
 var redEvents = ['stop', 'exit', 'delete', 'error', 'kill', 'exception', 'restart overlimit', 'suppressed'];
 
@@ -69,16 +76,45 @@ function sendSlack(message) {
     });
 }
 
+// Function to get the next buffer of messages (buffer length = 1s)
+function bufferMessage() {
+    var nextMessage = messages.shift();
+  
+    if (!conf.buffer) { return nextMessage; }
+  
+    nextMessage.buffer = [nextMessage.description];
+  
+    // continue shifting elements off the queue while they are the same event and timestamp so they can be buffered together into a single request
+    // @TODO: allow buffer length to be longer than 1s
+    while (messages.length 
+        && (messages[0].timestamp >= nextMessage.timestamp && messages[0].timestamp < (nextMessage.timestamp + conf.buffer_seconds))
+        && messages[0].event === nextMessage.event) {
+      
+        // append description to our buffer and shift the message off the queue and discard it
+        nextMessage.buffer.push(messages[0].description);
+        messages.shift();
+    
+    }
+  
+    // join the buffer with newlines
+    nextMessage.description = nextMessage.buffer.join("\n");
+  
+    // delete the buffer from memory
+    delete nextMessage.buffer;
+  
+    return nextMessage;
+}
+
 // Function to process the message queue
 function processQueue() {
 
     // If we have a message in the message queue, removed it from the queue and send it to slack
     if (messages.length > 0) {
-        sendSlack(messages.shift());
+        sendSlack(bufferMessage());
     }
 
-    // If there are over 10 messages in the queue, send the suppression message if it has not been sent and delete all the messages in the queue after 10
-    if (messages.length > 10) {
+    // If there are over conf.queue_max messages in the queue, send the suppression message if it has not been sent and delete all the messages in the queue after this amount (default: 100)
+    if (messages.length > conf.queue_max) {
         if (!suppressed.isSuppressed) {
             suppressed.isSuppressed = true;
             suppressed.date = new Date().getTime();
@@ -88,7 +124,7 @@ function processQueue() {
                 description: 'Messages are being suppressed due to rate limiting.'
             });
         }
-        messages.splice(10, messages.length);
+        messages.splice(conf.queue_max, messages.length);
     }
 
     // If the suppression message has been sent over 1 minute ago, we need to reset it back to false
@@ -112,7 +148,8 @@ pm2.launchBus(function(err, bus) {
                 messages.push({
                     name: data.process.name,
                     event: 'log',
-                    description: JSON.stringify(data.data)
+                    description: JSON.stringify(data.data),
+                    timestamp: Math.floor(Date.now() / 1000),
                 });
             }
         });
@@ -125,7 +162,8 @@ pm2.launchBus(function(err, bus) {
                 messages.push({
                     name: data.process.name,
                     event: 'error',
-                    description: JSON.stringify(data.data)
+                    description: JSON.stringify(data.data),
+                    timestamp: Math.floor(Date.now() / 1000),
                 });
             }
         });
@@ -137,7 +175,8 @@ pm2.launchBus(function(err, bus) {
             messages.push({
                 name: 'PM2',
                 event: 'kill',
-                description: data.msg
+                description: data.msg,
+                timestamp: Math.floor(Date.now() / 1000),
             });
         });
     }
@@ -149,7 +188,8 @@ pm2.launchBus(function(err, bus) {
                 messages.push({
                     name: data.process.name,
                     event: 'exception',
-                    description: JSON.stringify(data.data)
+                    description: JSON.stringify(data.data),
+                    timestamp: Math.floor(Date.now() / 1000),
                 });
             }
         });
@@ -162,7 +202,8 @@ pm2.launchBus(function(err, bus) {
                 messages.push({
                     name: data.process.name,
                     event: data.event,
-                    description: 'The following event has occured on the PM2 process ' + data.process.name + ': ' + data.event
+                    description: 'The following event has occured on the PM2 process ' + data.process.name + ': ' + data.event,
+                    timestamp: Math.floor(Date.now() / 1000),
                 });
             }
         }
