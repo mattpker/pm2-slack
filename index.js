@@ -85,7 +85,6 @@ function bufferMessage() {
     nextMessage.buffer = [nextMessage.description];
   
     // continue shifting elements off the queue while they are the same event and timestamp so they can be buffered together into a single request
-    // @TODO: allow buffer length to be longer than 1s
     while (messages.length 
         && (messages[0].timestamp >= nextMessage.timestamp && messages[0].timestamp < (nextMessage.timestamp + conf.buffer_seconds))
         && messages[0].event === nextMessage.event) {
