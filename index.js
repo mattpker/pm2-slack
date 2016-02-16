@@ -79,28 +79,28 @@ function sendSlack(message) {
 // Function to get the next buffer of messages (buffer length = 1s)
 function bufferMessage() {
     var nextMessage = messages.shift();
-  
+
     if (!conf.buffer) { return nextMessage; }
-  
+
     nextMessage.buffer = [nextMessage.description];
-  
+
     // continue shifting elements off the queue while they are the same event and timestamp so they can be buffered together into a single request
-    while (messages.length 
+    while (messages.length
         && (messages[0].timestamp >= nextMessage.timestamp && messages[0].timestamp < (nextMessage.timestamp + conf.buffer_seconds))
         && messages[0].event === nextMessage.event) {
-      
+
         // append description to our buffer and shift the message off the queue and discard it
         nextMessage.buffer.push(messages[0].description);
         messages.shift();
-    
+
     }
-  
+
     // join the buffer with newlines
     nextMessage.description = nextMessage.buffer.join("\n");
-  
+
     // delete the buffer from memory
     delete nextMessage.buffer;
-  
+
     return nextMessage;
 }
 
