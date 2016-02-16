@@ -36,6 +36,23 @@ pm2 set pm2-slack:log true
 pm2 set pm2-slack:error false
 ```
 
+## Options
+
+The following options are available:
+
+- buffer (bool) - Set to true to enable buffering of messages by timestamp.  Messages that occur with the same timestamp (seconds) will be concatenated together and posted as a single slack message. Default: false
+- buffer_seconds (int) - Duration in seconds to aggregate messages.  Has no effect if buffer is set to false.  Min: 1, Max: 5, Default: 1
+- queue_max (int) - Number of messages to keep queued before the queue will be truncated.  When the queue exceeds this maximum, a rate limit message will be posted to slack. Min: 10, Max: 100, Default: 100
+
+Set these options in the same way you subscribe to events.
+
+Example: The following configuration options will enable message buffering, and set the buffer duration to 2 seconds.  All messages that occur within 2 seconds of each other (for the same event) will be concatenated into a single slack message.
+
+```
+pm2 set pm2-slack:buffer true
+pm2 set pm2-slack:buffer_seconds 2
+```
+
 ## Contributing
 
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code.
