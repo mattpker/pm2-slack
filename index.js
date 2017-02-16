@@ -147,7 +147,7 @@ pm2.launchBus(function(err, bus) {
                 messages.push({
                     name: data.process.name,
                     event: 'log',
-                    description: JSON.stringify(data.data),
+                    description: data.data,
                     timestamp: Math.floor(Date.now() / 1000),
                 });
             }
@@ -161,7 +161,7 @@ pm2.launchBus(function(err, bus) {
                 messages.push({
                     name: data.process.name,
                     event: 'error',
-                    description: JSON.stringify(data.data),
+                    description: data.data,
                     timestamp: Math.floor(Date.now() / 1000),
                 });
             }
