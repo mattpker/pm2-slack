@@ -1,6 +1,6 @@
 {
   "name": "pm2-slack",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A PM2 module to emit events to Slack",
   "main": "index.js",
   "scripts": {

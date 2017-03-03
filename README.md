@@ -59,6 +59,7 @@ In lieu of a formal styleguide, take care to maintain the existing coding style.
 
 ## Release History
 
+- 0.3.1 Fixed Double escaping of error and log messages (thanks @ma-zal)
 - 0.3.0 Switched to a default buffer system that groups alike messages by timestamp in the same message to Slack (thanks @kjhangiani)
 - 0.2.0 Implemented a rate limiting system and updated all the dependencies
 - 0.1.1 Commenting & Clean up
