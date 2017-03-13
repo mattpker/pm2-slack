@@ -22,6 +22,7 @@ The following events can be subscribed to:
 - kill - Event fired when PM2 is killed. Default: true
 - exception - Any exceptions from your processes. Default: true
 - restart - Event fired when a process is restarted. Default: false
+- reload - Event fired when a cluster is reloaded. Default: false
 - delete - Event fired when a process is removed from PM2. Default: false
 - stop - Event fired when a process is stopped. Default: false
 - restart overlimit - Event fired when a process is reaches the max amount of times it can restart. Default: true
@@ -59,6 +60,7 @@ In lieu of a formal styleguide, take care to maintain the existing coding style.
 
 ## Release History
 
+- 0.3.3 Added documentation for the reload event
 - 0.3.2 Fixed Half width of error and log messages (thanks @ma-zal)
 - 0.3.1 Fixed Double escaping of error and log messages (thanks @ma-zal)
 - 0.3.0 Switched to a default buffer system that groups alike messages by timestamp in the same message to Slack (thanks @kjhangiani)
