@@ -54,7 +54,7 @@ function sendSlack(message) {
             fields: [{
                 title: name + ' - ' + event,
                 value: description,
-                short: true
+                short: false
             }]
         }]
     };

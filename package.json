@@ -1,6 +1,6 @@
 {
   "name": "pm2-slack",
-  "version": "0.3.1",
+  "version": "0.3.3",
   "description": "A PM2 module to emit events to Slack",
   "main": "index.js",
   "scripts": {
@@ -37,6 +37,7 @@
     "kill": true,
     "exception": true,
     "restart": false,
+    "reload": false,
     "delete": false,
     "stop": false,
     "restart overlimit": true,
