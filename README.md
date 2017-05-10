@@ -41,6 +41,7 @@ pm2 set pm2-slack:error false
 
 The following options are available:
 
+- username (string) - Set the username used in Slack for posting the message. By default this is the hostname of the server.
 - buffer (bool) - Enable/Disable buffering of messages by timestamp. Messages that occur with the same timestamp (seconds) will be concatenated together and posted as a single slack message. Default: true
 - buffer_seconds (int) - Duration in seconds to aggregate messages. Has no effect if buffer is set to false.  Min: 1, Max: 5, Default: 1
 - queue_max (int) - Number of messages to keep queued before the queue will be truncated. When the queue exceeds this maximum, a rate limit message will be posted to slack. Min: 10, Max: 100, Default: 100
@@ -50,6 +51,7 @@ Set these options in the same way you subscribe to events.
 Example: The following configuration options will enable message buffering, and set the buffer duration to 2 seconds.  All messages that occur within 2 seconds of each other (for the same event) will be concatenated into a single slack message.
 
 ```
+pm2 set pm2-slack:username pm2-user
 pm2 set pm2-slack:buffer true
 pm2 set pm2-slack:buffer_seconds 2
 ```
@@ -60,6 +62,7 @@ In lieu of a formal styleguide, take care to maintain the existing coding style.
 
 ## Release History
 
+- 0.3.4 Added an option to override the Slack username
 - 0.3.3 Added documentation for the reload event
 - 0.3.2 Fixed Half width of error and log messages (thanks @ma-zal)
 - 0.3.1 Fixed Double escaping of error and log messages (thanks @ma-zal)
