@@ -89,13 +89,9 @@ function sendToSlack(messages) {
     request(requestOptions, function(err, res, body) {
         if (err) return console.error(err);
         if (body !== 'ok') {
-            console.error('Error sending notification to Slack, verify that the Slack URL for incoming webhooks is correct.');
+            console.error('Error sending notification to Slack, verify that the Slack URL for incoming webhooks is correct. ' + messages.length + ' unsended message(s) lost.');
         }
     });
-    
-    // Remove all sended messages from queue;
-    messages = [];
-    
 }
 
 
@@ -114,7 +110,10 @@ function scheduleSendToSlack(message) {
         globalMessageQueue.push(message);
         // Plan send the enqueued messages
         scheduler.schedule(function() {
-            sendToSlack(globalMessageQueue);
+            // Remove waiting messages from global queue
+            const messagesToSend = globalMessageQueue.splice(0, globalMessageQueue.length);
+            
+            sendToSlack(messagesToSend);
         });
     }
 }
@@ -136,7 +135,7 @@ function convertMessagesToSlackAttachments(messages) {
             color = redColor;
         }
         
-        var fallbackText = message.name + ' ' + message.event + ': ' + (message.description || '').trim().replace(/[\r\n]+/g, ', ');
+        var fallbackText = message.name + ' ' + message.event + (message.description ? ': ' + message.description.trim().replace(/[\r\n]+/g, ', ') : '');
         slackAttachments.push({
             fallback: escapeSlackText(fallbackText),
             color: color,
