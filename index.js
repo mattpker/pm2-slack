@@ -44,7 +44,7 @@ function sendToSlack(messages) {
 
     // The JSON payload to send to the Webhook
     var payload = {
-        username: conf.servername || os.hostname(),
+        username: conf.username || os.hostname(),
         attachments: []
     };
 
