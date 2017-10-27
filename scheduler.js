@@ -31,8 +31,8 @@ var scheduler = {
     },
 
     /**
-     * Plan postponed execution of callback function.
-     * If some plan exists, it will be cancelled.
+     * Plan the postponed execution of callback function.
+     * If some plan exists, it will be cancelled and replaced by the new one.
      * 
      * @param {function} callback
      */

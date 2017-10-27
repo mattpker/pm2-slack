@@ -44,7 +44,7 @@ The following options are available:
 - username (string) - Set the username used in Slack for posting the message. By default this is the hostname of the server.
 - buffer (bool) - Enable/Disable buffering of messages. Messages that occur in short time will be concatenated together and posted as a single slack message. Default: true
 - buffer_seconds (int) - If buffering is enables, all messages are stored for this interval. If no new messages comes in this interval, buffered message(s) are sended to Slack. If new message comes in this interval, the "timer" will be reseted and buffer starts waiting for the new interval for a new next message. *Note: Puspose is reduction of push notifications on Slack clients.* Default: 1
-- buffer_mas_seconds (int) - If time exceed this time, the buffered messages are always sent to Slack, even if new messages are still comming in interval (property `buffer_seconds`). Default: 60
+- buffer_max_seconds (int) - If time exceed this time, the buffered messages are always sent to Slack, even if new messages are still comming in interval (property `buffer_seconds`). Default: 60
 - queue_max (int) - Maximum number of messages, that can be send in one Slack message (in one bufferring round). When the queue exceeds this maximum, next messages are suppresesed and replaced with message "`Next XX messages have been suppressed.`". Default: 100
 
 Set these options in the same way you subscribe to events.
