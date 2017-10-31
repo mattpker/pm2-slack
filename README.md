@@ -43,21 +43,20 @@ The following options are available:
 
 - username (string) - Set the username used in Slack for posting the message. By default this is the hostname of the server.
 - buffer (bool) - Enable/Disable buffering of messages. Messages that occur in short time will be concatenated together and posted as a single slack message. Default: true
-- buffer_seconds (int) - If buffering is enables, all messages are stored for this interval. If no new messages comes in this interval, buffered message(s) are sended to Slack. If new message comes in this interval, the "timer" will be reseted and buffer starts waiting for the new interval for a new next message. *Note: Puspose is reduction of push notifications on Slack clients.* Default: 1
-- buffer_max_seconds (int) - If time exceed this time, the buffered messages are always sent to Slack, even if new messages are still comming in interval (property `buffer_seconds`). Default: 60
+- buffer_seconds (int) - If buffering is enables, all messages are stored for this interval. If no new messages comes in this interval, buffered message(s) are sended to Slack. If new message comes in this interval, the "timer" will be reseted and buffer starts waiting for the new interval for a new next message. *Note: Puspose is reduction of push notifications on Slack clients.* Default: 2
+- buffer_max_seconds (int) - If time exceed this time, the buffered messages are always sent to Slack, even if new messages are still comming in interval (property `buffer_seconds`). Default: 20
 - queue_max (int) - Maximum number of messages, that can be send in one Slack message (in one bufferring round). When the queue exceeds this maximum, next messages are suppresesed and replaced with message "`Next XX messages have been suppressed.`". Default: 100
 
 Set these options in the same way you subscribe to events.
 
-Example: The following configuration options will enable message buffering, and set the buffer duration to 2 seconds. All messages that occur within maximum 2 seconds delay between two neighboring messages will be concatenated into a single slack message.
+Example: The following configuration options will enable message buffering, and set the buffer duration to 5 seconds. All messages that occur within maximum 5 seconds delay between two neighboring messages will be concatenated into a single slack message.
 
 ```
 pm2 set pm2-slack:username pm2-user
-pm2 set pm2-slack:buffer true
-pm2 set pm2-slack:buffer_seconds 2
+pm2 set pm2-slack:buffer_seconds 5
 ```
 
-Note: In this example, the maximum total delay for messages is still 60 seconds (default value for `buffer_max_seconds`). After this time, the buffer will be flushed
+Note: In this example, the maximum total delay for messages is still 20 seconds (default value for `buffer_max_seconds`). After this time, the buffer will be flushed
 everytime and all messages will be sent.
 
 
