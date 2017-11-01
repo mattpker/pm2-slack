@@ -1,6 +1,6 @@
 {
   "name": "pm2-slack",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A PM2 module to emit events to Slack",
   "main": "index.js",
   "scripts": {
@@ -15,6 +15,9 @@
     "slack"
   ],
   "author": "Matt Atkinson <mattpker@gmail.com> (https://github.com/mattpker)",
+  "contributors": [
+    "Martin Zaloudek (https://github.com/ma-zal)"
+  ],
   "licenses": [
     {
       "type": "MIT",

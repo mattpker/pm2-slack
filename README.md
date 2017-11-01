@@ -41,7 +41,7 @@ pm2 set pm2-slack:error false
 
 The following options are available:
 
-- username (string) - Set the username used in Slack for posting the message. By default this is the hostname of the server.
+- servername / username (string) - Set the custom username for Slack messages (visible in message headers). By default this is the hostname of the server.
 - buffer (bool) - Enable/Disable buffering of messages. Messages that occur in short time will be concatenated together and posted as a single slack message. Default: true
 - buffer_seconds (int) - If buffering is enables, all messages are stored for this interval. If no new messages comes in this interval, buffered message(s) are sended to Slack. If new message comes in this interval, the "timer" will be reseted and buffer starts waiting for the new interval for a new next message. *Note: Puspose is reduction of push notifications on Slack clients.* Default: 2
 - buffer_max_seconds (int) - If time exceed this time, the buffered messages are always sent to Slack, even if new messages are still comming in interval (property `buffer_seconds`). Default: 20
@@ -52,19 +52,38 @@ Set these options in the same way you subscribe to events.
 Example: The following configuration options will enable message buffering, and set the buffer duration to 5 seconds. All messages that occur within maximum 5 seconds delay between two neighboring messages will be concatenated into a single slack message.
 
 ```
-pm2 set pm2-slack:username pm2-user
 pm2 set pm2-slack:buffer_seconds 5
 ```
 
 Note: In this example, the maximum total delay for messages is still 20 seconds (default value for `buffer_max_seconds`). After this time, the buffer will be flushed
 everytime and all messages will be sent.
 
+### PM2 process based custom configuration
+
+You can define the different Slack URL (and buffer parameters) to each PM2 process.
+Use format `pm2-slack:slack_url-processName` and `pm2-slack:propertyName-processName` in general to process based custom definition.
+If no custom definition exists, the global `pm2-slack:slack_url` (and `pm2-slack:propertyName`) will be used.
+
+###### Example
+
+```
+# Define global Slack URL for all processes (except the process `foo` and `bar`).
+pm2 set pm2-slack:slack_url https://hooks.slack.com/services/123456789/123456789/aaaaaaa
+
+# Define custom Slack URL for `foo` process.
+pm2 set pm2-slack:slack_url-foo https://hooks.slack.com/services/123456789/123456789/bbbbbbb
+
+# Define custom Slack URL for `bar` process
+pm2 set pm2-slack:slack_url-bar https://hooks.slack.com/services/123456789/123456789/ccccccc
+```
+  
 
 ## Contributing
 
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code.
 
 ## Release History
+- 1.1.0 Independent Slack URLs can be defined to each PM2 process. 
 - 1.0.0 Message bufferring refactored. Message grouping refactored.
         Added datetime parsing from log messages.
 - 0.3.4 Added an option to override the Slack username

@@ -10,54 +10,54 @@
  * - Postponing time is defined in `this.config.buffer_seconds`.
  * - 
  */
-var scheduler = {
+function Scheduler(config) {
+    const self = this;
     
     /** @private */
-    _timeoutId: null,
+    self._timeoutId = null;
     
     /** @private */
-    _totalPostponingSeconds: 0,
+    self._totalPostponingSeconds = 0;
     
-    config: {
-        /**
-         * Postponing time. If it is zero, the callback is always executed immediately. 
-         */
-        buffer_seconds: 0,
-        /**
-         * If is defined, postponning is limited to this total time.
-         * So when the new postponings are request and it will exceed this value, it will be ignored. 
-         */
-        buffer_max_seconds: 60,
-    },
-
+    
     /**
-     * Plan the postponed execution of callback function.
-     * If some plan exists, it will be cancelled and replaced by the new one.
+     * @property {number} buffer_seconds - Postponing time. If it is zero, the callback is always executed immediately.
      * 
-     * @param {function} callback
+     * @property {number} buffer_max_seconds - If is defined, postponning is limited to this total time.
+     *     So when the new postponings are request and it will exceed this value, it will be ignored. 
      */
-    schedule: function(callback) {
-        if (this.config.buffer_max_seconds && (this.config.buffer_max_seconds <= this._totalPostponingSeconds + this.config.buffer_seconds)) {
-            // Max buffer time reached. Do not replan sending.
-            return;
-        }
-        
-        // If previous sending is planned, cancel it.        
-        if (this._timeoutId) {
-            clearTimeout(this._timeoutId);
-        }
-        // Plan the message sending after timeout
-        var self = this;
-        this._timeoutId = setTimeout(function() {
-            self._timeoutId = null;
-            self._totalPostponingSeconds = 0;
-            
-            callback();
-        }, this.config.buffer_seconds * 1000);
-        this._totalPostponingSeconds += this.config.buffer_seconds;
-        
-    },
-    
+    self.config = config;
 };
 
-module.exports = scheduler;
+
+/**
+ * Plan the postponed execution of callback function.
+ * If some plan exists, it will be cancelled and replaced by the new one.
+ * 
+ * @param {function} callback
+ */
+Scheduler.prototype.schedule = function(callback) {
+    const self = this;
+    
+    if (self.config.buffer_max_seconds && (self.config.buffer_max_seconds <= self._totalPostponingSeconds + self.config.buffer_seconds)) {
+        // Max buffer time reached. Do not replan sending.
+        return;
+    }
+    
+    // If previous sending is planned, cancel it.        
+    if (self._timeoutId) {
+        clearTimeout(this._timeoutId);
+    }
+    // Plan the message sending after timeout
+    self._timeoutId = setTimeout(function() {
+        self._timeoutId = null;
+        self._totalPostponingSeconds = 0;
+        
+        callback();
+    }, self.config.buffer_seconds * 1000);
+    self._totalPostponingSeconds += this.config.buffer_seconds;
+    
+};
+    
+
+module.exports = Scheduler;
