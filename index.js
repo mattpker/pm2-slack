@@ -127,17 +127,17 @@ function scheduleSendToSlack(message) {
  */
 function convertMessagesToSlackAttachments(messages) {
     return messages.reduce(function(slackAttachments, message) {
-    
+
         // The default color for events should be green
-        let color = commonColor;
+        var color = commonColor;
         // If the event is listed in redEvents, set the color to red
         if (redEvents.indexOf(message.event) > -1) {
             color = redColor;
         }
-        
-        let title = `${message.name}[${message.pm_id}] ${message.event}`;
-        let description = (message.description || '').trim();
-        let fallbackText = title + (description ? ': ' + description.replace(/[\r\n]+/g, ', ') : '');
+
+        var title = `${message.name} ${message.event}`;
+        var description = (message.description || '').trim();
+        var fallbackText = title + (description ? ': ' + description.replace(/[\r\n]+/g, ', ') : '');
         slackAttachments.push({
             fallback: escapeSlackText(fallbackText),
             color: color,
@@ -146,7 +146,7 @@ function convertMessagesToSlackAttachments(messages) {
             ts: message.timestamp,
             // footer: message.name,
         });
-        
+
         return slackAttachments;
     }, []);
 }
@@ -217,6 +217,17 @@ function mergeSimilarMessages(messages) {
 scheduler.config.buffer_seconds = Number.parseInt(conf.buffer_seconds);
 scheduler.config.buffer_max_seconds = Number.parseInt(conf.buffer_max_seconds);
 
+/**
+ * Get pm2 app display name.
+ * If the app is running in cluster mode, id will append [pm_id] as the suffix.
+ *
+ * @param {object} process
+ * @returns {string} name
+ */
+function parseProcessName(process) {
+    return process.name + (process.exec_mode === 'cluster_mode' && process.instances > 1 ? `[${process.pm_id}]` : '');
+}
+
 // Start listening on the PM2 BUS
 pm2.launchBus(function(err, bus) {
 
@@ -226,8 +237,7 @@ pm2.launchBus(function(err, bus) {
             if (data.process.name !== 'pm2-slack') {
                 var parsedLog = parseIncommingLog(data.data);
                 scheduleSendToSlack({
-                    name: data.process.name,
-                    pm_id: data.process.pm_id,
+                    name: parseProcessName(data.process),
                     event: 'log',
                     description: parsedLog.description,
                     timestamp: parsedLog.timestamp,
@@ -242,8 +252,7 @@ pm2.launchBus(function(err, bus) {
             if (data.process.name !== 'pm2-slack') {
                 var parsedLog = parseIncommingLog(data.data);
                 scheduleSendToSlack({
-                    name: data.process.name,
-                    pm_id: data.process.pm_id,
+                    name: parseProcessName(data.process),
                     event: 'error',
                     description: parsedLog.description,
                     timestamp: parsedLog.timestamp,
@@ -271,8 +280,7 @@ pm2.launchBus(function(err, bus) {
                 // If it is instance of Error, use it. If type is unknown, stringify it.
                 var description = (data.data && data.data.message) ? (data.data.code || '') + data.data.message :  JSON.stringify(data.data);
                 scheduleSendToSlack({
-                    name: data.process.name,
-                    pm_id: data.process.pm_id,
+                    name: parseProcessName(data.process),
                     event: 'exception',
                     description: description,
                     timestamp: Math.floor(Date.now() / 1000),
@@ -299,8 +307,7 @@ pm2.launchBus(function(err, bus) {
                         
                 }
                 scheduleSendToSlack({
-                    name: data.process.name,
-                    pm_id: data.process.pm_id,
+                    name: parseProcessName(data.process),
                     event: data.event,
                     description: description,
                     timestamp: Math.floor(Date.now() / 1000),
