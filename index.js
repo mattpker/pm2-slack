@@ -22,7 +22,7 @@ var globalMessageQueue = [];
 
 /**
  * Sends immediately the message(s) to Slack's Incoming Webhook.
- * 
+ *
  * @param {Message[]) messages - List of messages, ready to send.
  *                              This list can be trimmed and concated base on module configuration.
  */
@@ -49,7 +49,7 @@ function sendToSlack(messages) {
     };
 
 
-    // Merge together all messages from same process and with same event 
+    // Merge together all messages from same process and with same event
     // Convert messages to Slack message's attachments
     payload.attachments = convertMessagesToSlackAttachments(mergeSimilarMessages(limitedCountOfMessages));
     
@@ -62,7 +62,7 @@ function sendToSlack(messages) {
             .join(", ");
     }
 
-    // Group together all messages with same title. 
+    // Group together all messages with same title.
     // payload.attachments = groupSameSlackAttachmentTypes(payload.attachments);
 
     // Add warning, if some messages has been suppresed
@@ -98,7 +98,7 @@ function sendToSlack(messages) {
 /**
  * Sends the message to Slack's Incoming Webhook.
  * If buffer is enabled, the message is added to queue and sending is postponed for couple of seconds.
- * 
+ *
  * @param {Message} message
  */
 function scheduleSendToSlack(message) {
@@ -121,30 +121,32 @@ function scheduleSendToSlack(message) {
 
 /**
  * Converts messages to json format, that can be sent as Slack message's attachments.
- * 
+ *
  * @param {Message[]) messages
  * @returns {SlackAttachment[]}
  */
 function convertMessagesToSlackAttachments(messages) {
     return messages.reduce(function(slackAttachments, message) {
-    
+
         // The default color for events should be green
         var color = commonColor;
         // If the event is listed in redEvents, set the color to red
         if (redEvents.indexOf(message.event) > -1) {
             color = redColor;
         }
-        
-        var fallbackText = message.name + ' ' + message.event + (message.description ? ': ' + message.description.trim().replace(/[\r\n]+/g, ', ') : '');
+
+        var title = `${message.name} ${message.event}`;
+        var description = (message.description || '').trim();
+        var fallbackText = title + (description ? ': ' + description.replace(/[\r\n]+/g, ', ') : '');
         slackAttachments.push({
             fallback: escapeSlackText(fallbackText),
             color: color,
-            title: escapeSlackText(message.name + ' ' + message.event),
-            text: escapeSlackText(message.description ? message.description.trim() : ''),
+            title: escapeSlackText(title),
+            text: escapeSlackText(description),
             ts: message.timestamp,
-            // footer: message.name, 
+            // footer: message.name,
         });
-        
+
         return slackAttachments;
     }, []);
 }
@@ -153,7 +155,7 @@ function convertMessagesToSlackAttachments(messages) {
 /**
  * New PM2 is storing log messages with date in format "YYYY-MM-DD hh:mm:ss +-zz:zz"
  * Parses this date from begin of message
- * 
+ *
  * @param {string} logMessage
  * @returns {{description:string|null, timestamp:number|null}}
  */
@@ -188,7 +190,7 @@ function parseIncommingLog(logMessage) {
 
 /**
  * Merge together all messages from same process and with same event
- * 
+ *
  * @param {Messages[]} messages
  * @returns {Messages[]}
  */
@@ -212,8 +214,19 @@ function mergeSimilarMessages(messages) {
 // ----- APP INITIALIZATION -----
 
 // Initialize buffer configuration from PM config variables
-scheduler.config.buffer_seconds = Number.parseInt(conf.buffer_seconds); 
-scheduler.config.buffer_max_seconds = Number.parseInt(conf.buffer_max_seconds); 
+scheduler.config.buffer_seconds = Number.parseInt(conf.buffer_seconds);
+scheduler.config.buffer_max_seconds = Number.parseInt(conf.buffer_max_seconds);
+
+/**
+ * Get pm2 app display name.
+ * If the app is running in cluster mode, id will append [pm_id] as the suffix.
+ *
+ * @param {object} process
+ * @returns {string} name
+ */
+function parseProcessName(process) {
+    return process.name + (process.exec_mode === 'cluster_mode' && process.instances > 1 ? `[${process.pm_id}]` : '');
+}
 
 // Start listening on the PM2 BUS
 pm2.launchBus(function(err, bus) {
@@ -224,7 +237,7 @@ pm2.launchBus(function(err, bus) {
             if (data.process.name !== 'pm2-slack') {
                 var parsedLog = parseIncommingLog(data.data);
                 scheduleSendToSlack({
-                    name: data.process.name,
+                    name: parseProcessName(data.process),
                     event: 'log',
                     description: parsedLog.description,
                     timestamp: parsedLog.timestamp,
@@ -239,7 +252,7 @@ pm2.launchBus(function(err, bus) {
             if (data.process.name !== 'pm2-slack') {
                 var parsedLog = parseIncommingLog(data.data);
                 scheduleSendToSlack({
-                    name: data.process.name,
+                    name: parseProcessName(data.process),
                     event: 'error',
                     description: parsedLog.description,
                     timestamp: parsedLog.timestamp,
@@ -267,7 +280,7 @@ pm2.launchBus(function(err, bus) {
                 // If it is instance of Error, use it. If type is unknown, stringify it.
                 var description = (data.data && data.data.message) ? (data.data.code || '') + data.data.message :  JSON.stringify(data.data);
                 scheduleSendToSlack({
-                    name: data.process.name,
+                    name: parseProcessName(data.process),
                     event: 'exception',
                     description: description,
                     timestamp: Math.floor(Date.now() / 1000),
@@ -294,7 +307,7 @@ pm2.launchBus(function(err, bus) {
                         
                 }
                 scheduleSendToSlack({
-                    name: data.process.name,
+                    name: parseProcessName(data.process),
                     event: data.event,
                     description: description,
                     timestamp: Math.floor(Date.now() / 1000),
@@ -309,7 +322,7 @@ pm2.launchBus(function(err, bus) {
 /**
  * Escapes the plain text before sending to Slack's Incoming webhook.
  * @see https://api.slack.com/docs/message-formatting#how_to_escape_characters
- * 
+ *
  * @param {string} text
  * @returns {string}
  */
@@ -320,7 +333,7 @@ function escapeSlackText(text) {
 
 /**
  * @typedef {Object} SlackAttachment
- * 
+ *
  * @property {string} fallback
  * @property {string} title
  * @property {string} [color]
