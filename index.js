@@ -1,155 +1,19 @@
 'use strict';
 
 // Dependency
-var os = require('os');
-var pm2 = require('pm2');
-var pmx = require('pmx');
-var request = require('request');
-var scheduler = require('./scheduler');
-
-
-// Get the configuration from PM2
-var conf = pmx.initModule();
-
-// The events that will trigger the color red
-var redEvents = ['stop', 'exit', 'delete', 'error', 'kill', 'exception', 'restart overlimit', 'suppressed'];
-var redColor = '#F44336';
-var commonColor = '#2196F3';
-
-// create the message queue
-var globalMessageQueue = [];
+const pm2 = require('pm2');
+const pmx = require('pmx');
+const MessageQueue = require('./message-queue');
 
 
 /**
- * Sends immediately the message(s) to Slack's Incoming Webhook.
+ * Get the configuration from PM2
  *
- * @param {Message[]) messages - List of messages, ready to send.
- *                              This list can be trimmed and concated base on module configuration.
+ * @type {Object}
+ * @property {boolean} exception
  */
-function sendToSlack(messages) {
 
-    // If a Slack URL is not set, we do not want to continue and nofify the user that it needs to be set
-    if (!conf.slack_url) {
-        return console.error("There is no Slack URL set, please set the Slack URL: 'pm2 set pm2-slack:slack_url https://slack_url'");
-    }
-
-    var limitedCountOfMessages;
-    if (conf.queue_max > 0) {
-        // Limit count of messages for sending
-        limitedCountOfMessages = messages.splice(0, Math.min(conf.queue_max, messages.length));
-    } else {
-        // Select all messages for sending
-        limitedCountOfMessages = messages;
-    }
-
-    // The JSON payload to send to the Webhook
-    var payload = {
-        username: conf.username || os.hostname(),
-        attachments: []
-    };
-
-
-    // Merge together all messages from same process and with same event
-    // Convert messages to Slack message's attachments
-    payload.attachments = convertMessagesToSlackAttachments(mergeSimilarMessages(limitedCountOfMessages));
-    
-    // Because Slack`s notification text displays the fallback text of first attachment only,
-    // add list of message types to better overview about complex message in mobile notifications.
-    
-    if (payload.attachments.length > 1) {
-        payload.text = payload.attachments
-            .map(function(/*SlackAttachment*/ attachment) { return attachment.title; })
-            .join(", ");
-    }
-
-    // Group together all messages with same title.
-    // payload.attachments = groupSameSlackAttachmentTypes(payload.attachments);
-
-    // Add warning, if some messages has been suppresed
-    if (messages.length > 0) {
-        var text = 'Next ' + messages.length + ' message' + (messages.length > 1 ? 's have ' : ' has ') + 'been suppressed.';
-        payload.attachments.push({
-            fallback: text,
-            // color: redColor,
-            title: 'message rate limitation',
-            text: text,
-            ts: Math.floor(Date.now() / 1000),
-        });
-    }
-    
-    // Options for the post request
-    var requestOptions = {
-        method: 'post',
-        body: payload,
-        json: true,
-        url: conf.slack_url,
-    };
-
-    // Finally, make the post request to the Slack Incoming Webhook
-    request(requestOptions, function(err, res, body) {
-        if (err) return console.error(err);
-        if (body !== 'ok') {
-            console.error('Error sending notification to Slack, verify that the Slack URL for incoming webhooks is correct. ' + messages.length + ' unsended message(s) lost.');
-        }
-    });
-}
-
-
-/**
- * Sends the message to Slack's Incoming Webhook.
- * If buffer is enabled, the message is added to queue and sending is postponed for couple of seconds.
- *
- * @param {Message} message
- */
-function scheduleSendToSlack(message) {
-    if (!conf.buffer || !(conf.buffer_seconds > 0)) {
-        // No sending buffer defined. Send directly to Slack.
-        sendToSlack([message]);
-    } else {
-        // Add message to buffer
-        globalMessageQueue.push(message);
-        // Plan send the enqueued messages
-        scheduler.schedule(function() {
-            // Remove waiting messages from global queue
-            const messagesToSend = globalMessageQueue.splice(0, globalMessageQueue.length);
-            
-            sendToSlack(messagesToSend);
-        });
-    }
-}
-
-
-/**
- * Converts messages to json format, that can be sent as Slack message's attachments.
- *
- * @param {Message[]) messages
- * @returns {SlackAttachment[]}
- */
-function convertMessagesToSlackAttachments(messages) {
-    return messages.reduce(function(slackAttachments, message) {
-
-        // The default color for events should be green
-        var color = commonColor;
-        // If the event is listed in redEvents, set the color to red
-        if (redEvents.indexOf(message.event) > -1) {
-            color = redColor;
-        }
-
-        var title = `${message.name} ${message.event}`;
-        var description = (message.description || '').trim();
-        var fallbackText = title + (description ? ': ' + description.replace(/[\r\n]+/g, ', ') : '');
-        slackAttachments.push({
-            fallback: escapeSlackText(fallbackText),
-            color: color,
-            title: escapeSlackText(title),
-            text: escapeSlackText(description),
-            ts: message.timestamp,
-            // footer: message.name,
-        });
-
-        return slackAttachments;
-    }, []);
-}
+const moduleConfig = pmx.initModule();
 
 
 /**
@@ -160,15 +24,15 @@ function convertMessagesToSlackAttachments(messages) {
  * @returns {{description:string|null, timestamp:number|null}}
  */
 function parseIncommingLog(logMessage) {
-    var description = null;
-    var timestamp = null;
-    
+    let description = null;
+    let timestamp = null;
+
     if (typeof logMessage === "string") {
         // Parse date on begin (if exists)
-        var dateRegex = /([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{1,2}:[0-9]{2}:[0-9]{2}(\.[0-9]{3})? [+\-]?[0-9]{1,2}:[0-9]{2}(\.[0-9]{3})?)[:\-\s]+/;
-        var parsedDescription = dateRegex.exec(logMessage);
+        const dateRegex = /([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{1,2}:[0-9]{2}:[0-9]{2}(\.[0-9]{3})? [+\-]?[0-9]{1,2}:[0-9]{2}(\.[0-9]{3})?)[:\-\s]+/;
+        const parsedDescription = dateRegex.exec(logMessage);
         // Note: The `parsedDescription[0]` is datetime with separator(s) on the end.
-        //       The `parsedDescription[1]` is datetime only (without separators). 
+        //       The `parsedDescription[1]` is datetime only (without separators).
         //       The `parsedDescription[2]` are ".microseconds"
         if (parsedDescription && parsedDescription.length >= 2) {
             // Use timestamp from message
@@ -180,7 +44,7 @@ function parseIncommingLog(logMessage) {
             description = logMessage;
         }
     }
-    
+
     return {
         description: description,
         timestamp: timestamp
@@ -188,34 +52,48 @@ function parseIncommingLog(logMessage) {
 }
 
 
-/**
- * Merge together all messages from same process and with same event
- *
- * @param {Messages[]} messages
- * @returns {Messages[]}
- */
-function mergeSimilarMessages(messages) {
-    return messages.reduce(function(/*Message[]*/ finalMessages, /*Message*/ currentMessage) {
-        if (finalMessages.length > 0
-            && finalMessages[finalMessages.length-1].name === currentMessage.name
-            && finalMessages[finalMessages.length-1].event === currentMessage.event
-        ) {
-            // Current message has same title as previous one. Concate it.
-            finalMessages[finalMessages.length-1].description += "\n" + currentMessage.description;
-        } else {
-            // Current message is different than previous one.
-            finalMessages.push(currentMessage);
+const slackUrlRouter = {
+    /**
+     * Keys are slackUrls, values are instances of MessageQueue
+     *
+     * @typedef {Object.<string, MessageQueue>}
+     */
+    messageQueues: {},
+
+
+    /**
+     * Add the message to appropriate message queue (each Slack URL has own independent message enqueing).
+     *
+     * @param {Message} message
+     */
+    addMessage: function(message) {
+        const processName = message.name;
+        const slackUrl = moduleConfig['slack_url-' + processName] || moduleConfig['slack_url'];
+
+        if (!slackUrl) {
+            return;
+            // No Slack URL defined for this process and no global Slack URL exists.
         }
-        return finalMessages;
-    }, []);
-}
 
+        if (!this.messageQueues[slackUrl]) {
+            // Init new messageQueue to different Slack URL.
 
-// ----- APP INITIALIZATION -----
+            // Resolve configuration parameters.
+            const configProperties = ['username', 'servername', 'buffer', 'slack_url', 'buffer_seconds', 'buffer_max_seconds', 'queue_max'];
+            const config = {};
+            configProperties.map((configPropertyName) => {
+                // Use process based custom configuration values if exist, else use the global configuration values.
+                config[configPropertyName] = moduleConfig[configPropertyName + '-' + processName] || moduleConfig[configPropertyName];
+            });
 
-// Initialize buffer configuration from PM config variables
-scheduler.config.buffer_seconds = Number.parseInt(conf.buffer_seconds);
-scheduler.config.buffer_max_seconds = Number.parseInt(conf.buffer_max_seconds);
+            this.messageQueues[slackUrl] = new MessageQueue(config);
+        }
+
+        this.messageQueues[slackUrl].addMessageToQueue(message);
+
+    }
+};
+
 
 /**
  * Get pm2 app display name.
@@ -228,43 +106,46 @@ function parseProcessName(process) {
     return process.name + (process.exec_mode === 'cluster_mode' && process.instances > 1 ? `[${process.pm_id}]` : '');
 }
 
+
+// ----- APP INITIALIZATION -----
+
 // Start listening on the PM2 BUS
 pm2.launchBus(function(err, bus) {
 
     // Listen for process logs
-    if (conf.log) {
+    if (moduleConfig.log) {
         bus.on('log:out', function(data) {
-            if (data.process.name !== 'pm2-slack') {
-                var parsedLog = parseIncommingLog(data.data);
-                scheduleSendToSlack({
-                    name: parseProcessName(data.process),
-                    event: 'log',
-                    description: parsedLog.description,
-                    timestamp: parsedLog.timestamp,
-                });
-            }
+            if (data.process.name === 'pm2-slack') { return; } // Ignore messages of own module.
+
+            const parsedLog = parseIncommingLog(data.data);
+            slackUrlRouter.addMessage({
+                name: parseProcessName(data.process),
+                event: 'log',
+                description: parsedLog.description,
+                timestamp: parsedLog.timestamp,
+            });
         });
     }
 
     // Listen for process errors
-    if (conf.error) {
+    if (moduleConfig.error) {
         bus.on('log:err', function(data) {
-            if (data.process.name !== 'pm2-slack') {
-                var parsedLog = parseIncommingLog(data.data);
-                scheduleSendToSlack({
-                    name: parseProcessName(data.process),
-                    event: 'error',
-                    description: parsedLog.description,
-                    timestamp: parsedLog.timestamp,
-                });
-            }
+            if (data.process.name === 'pm2-slack') { return; } // Ignore messages of own module.
+
+            const parsedLog = parseIncommingLog(data.data);
+            slackUrlRouter.addMessage({
+                name: parseProcessName(data.process),
+                event: 'error',
+                description: parsedLog.description,
+                timestamp: parsedLog.timestamp,
+            });
         });
     }
 
     // Listen for PM2 kill
-    if (conf.kill) {
+    if (moduleConfig.kill) {
         bus.on('pm2:kill', function(data) {
-            scheduleSendToSlack({
+            slackUrlRouter.addMessage({
                 name: 'PM2',
                 event: 'kill',
                 description: data.msg,
@@ -274,78 +155,53 @@ pm2.launchBus(function(err, bus) {
     }
 
     // Listen for process exceptions
-    if (conf.exception) {
+    if (moduleConfig.exception) {
         bus.on('process:exception', function(data) {
-            if (data.process.name !== 'pm2-slack') {
-                // If it is instance of Error, use it. If type is unknown, stringify it.
-                var description = (data.data && data.data.message) ? (data.data.code || '') + data.data.message :  JSON.stringify(data.data);
-                scheduleSendToSlack({
-                    name: parseProcessName(data.process),
-                    event: 'exception',
-                    description: description,
-                    timestamp: Math.floor(Date.now() / 1000),
-                });
-            }
+            if (data.process.name === 'pm2-slack') { return; } // Ignore messages of own module.
+
+            // If it is instance of Error, use it. If type is unknown, stringify it.
+            const description = (data.data && data.data.message) ? (data.data.code || '') + data.data.message :  JSON.stringify(data.data);
+            slackUrlRouter.addMessage({
+                name: parseProcessName(data.process),
+                event: 'exception',
+                description: description,
+                timestamp: Math.floor(Date.now() / 1000),
+            });
         });
     }
 
     // Listen for PM2 events
     bus.on('process:event', function(data) {
-        if (conf[data.event]) {
-            if (data.process.name !== 'pm2-slack') {
-                var description = null;
-                switch (data.event) {
-                    case 'start':
-                    case 'stop':
-                    case 'restart':
-                        description = null;
-                        break;
-                        
-                    case 'restart overlimit':
-                        description = 'Process has been stopped. Check and fix the issue.';
-                        break;
-                        
-                }
-                scheduleSendToSlack({
-                    name: parseProcessName(data.process),
-                    event: data.event,
-                    description: description,
-                    timestamp: Math.floor(Date.now() / 1000),
-                });
-            }
+        if (!moduleConfig[data.event]) { return; } // This event type is disabled by configuration.
+        if (data.process.name === 'pm2-slack') { return; } // Ignore messages of own module.
+
+        let description = null;
+        switch (data.event) {
+            case 'start':
+            case 'stop':
+            case 'restart':
+                description = null;
+                break;
+
+            case 'restart overlimit':
+                description = 'Process has been stopped. Check and fix the issue.';
+                break;
+
         }
+        slackUrlRouter.addMessage({
+            name: parseProcessName(data.process),
+            event: data.event,
+            description: description,
+            timestamp: Math.floor(Date.now() / 1000),
+        });
     });
 });
-
-
-
-/**
- * Escapes the plain text before sending to Slack's Incoming webhook.
- * @see https://api.slack.com/docs/message-formatting#how_to_escape_characters
- *
- * @param {string} text
- * @returns {string}
- */
-function escapeSlackText(text) {
-    return (text || '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;');
-}
-
-
-/**
- * @typedef {Object} SlackAttachment
- *
- * @property {string} fallback
- * @property {string} title
- * @property {string} [color]
- * @property {string} [text]
- * @property {number} ts - Linux timestamp format
- */
 
 
 /**
  * @typedef {Object} Message
  *
- * @property {string} name
+ * @property {string} name - Process name
  * @property {string} event - `start`|`stop`|`restart`|`error`|`exception`|`restart overlimit`| ...
  * @property {string} description
  * @property {number} timestamp - Linux timestamp format
