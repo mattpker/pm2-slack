@@ -10,6 +10,11 @@ To install and setup pm2-slack, run the following commands:
 pm2 install pm2-slack
 pm2 set pm2-slack:slack_url https://slack_url
 ```
+Also, you can set any variable though envirouyment, just like this (`docker-compose` example):
+```
+environment: 
+      pm2_slack_slack_url: https://slack_url
+```
 
 To get the Slack URL, you need to setup an Incoming Webhook. More details on how to set this up can be found here: https://api.slack.com/incoming-webhooks
 
@@ -49,6 +54,7 @@ The following options are available:
 - `queue_max` (int) - Maximum number of messages, that can be send in one Slack message (in one bufferring round). When the queue exceeds this maximum, next messages are suppresesed and replaced with message "*Next XX messages have been suppressed.*". Default: 100
 
 Set these options in the same way as subscribing to events.
+Any of them can be set though environment variable `pm2_slack_{option_name}`.
 
 
 ###### Example
